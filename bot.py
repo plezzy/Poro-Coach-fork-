@@ -1,36 +1,47 @@
-# bot.py
 import os
+import asyncio
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
-# Cargar variables desde el archivo .env
+# Cargar variables del .env
 load_dotenv()
-
-# Leer variables de entorno
-TOKEN = os.getenv("DISCORD_TOKEN")  # 👈 debe coincidir con el nombre en tu archivo .env
+TOKEN = os.getenv("DISCORD_TOKEN")
 PREFIX = os.getenv("PREFIX", "!")
 
-# Verificar si el token se cargó
-print("TOKEN desde .env:", TOKEN is not None)  # solo dirá True/False, sin mostrarlo
-
-# Configurar permisos básicos (intents)
+# Intents
 intents = discord.Intents.default()
 intents.message_content = True
 
-# Crear el bot
-bot = commands.Bot(command_prefix=PREFIX, intents=intents)
+# Crear bot
+bot = commands.Bot(
+    command_prefix=PREFIX,
+    intents=intents,
+    help_command=None  # Desactiva el help default
+)
+
+# Cargar cogs dinámicamente desde /Cogs
+async def load_cogs():
+    print("\n=== CARGANDO COGS ===")
+    for filename in os.listdir("./cogs"):
+        if filename.endswith(".py") and not filename.startswith("__"):
+            name = f"cogs.{filename[:-3]}"
+            try:
+                await bot.load_extension(name)
+                print(f"✅ Cargado: {name}")
+            except Exception as e:
+                print(f"❌ Error cargando {name}: {e}")
+    print("=== FIN DE CARGA ===\n")
 
 @bot.event
 async def on_ready():
-    print(f"✅ Bot conectado como {bot.user}")
+    print(f"🤖 Bot conectado como {bot.user}")
 
-@bot.command()
-async def ping(ctx):
-    await ctx.send("🏓 ¡Pong!")
+# Main asincrónico
+async def main():
+    async with bot:
+        await load_cogs()
+        await bot.start(TOKEN)
 
-# Ejecutar el bot
-if TOKEN:
-    bot.run(TOKEN)
-else:
-    print("❌ ERROR: No se pudo leer el token desde .env")
+if __name__ == "__main__":
+    asyncio.run(main())
